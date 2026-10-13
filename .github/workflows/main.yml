@@ -118,6 +118,7 @@ jobs:
         with:
           name: CropGuard-AI-release-apk
           path: android/app/build/outputs/apk/release/CropGuard-AI-release.apk
+          if-no-files-found: error
 
       - name: Create GitHub Release (If tagged or manual)
         uses: softprops/action-gh-release@v2
