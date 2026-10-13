@@ -102,6 +102,8 @@ jobs:
           fi
           mkdir -p android/app/src/release
           cp android/app/google-services.json android/app/src/release/google-services.json
+          # Purge any residual orientation splash drawable folders that cause AAPT compilation errors
+          rm -rf android/app/src/main/res/drawable-port-* android/app/src/main/res/drawable-land-* || true
 
       - name: Make Gradle Wrapper Executable
         run: chmod +x android/gradlew
