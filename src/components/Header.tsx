@@ -126,6 +126,8 @@ export const Header: React.FC<HeaderProps> = ({
     { id: "shops", label: t.tabShops, icon: "🏪" },
     { id: "ai_agent", label: t.tabAiAgent, icon: "🤖" },
     { id: "alerts", label: t.tabAlerts || "Seasonal Alerts", icon: "🔔" },
+    { id: "history", label: "Scan History", icon: "📋" },
+    { id: "offline", label: "Disease Manual", icon: "📖" },
   ];
 
   return (
@@ -195,6 +197,7 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
 
             )}
+
             {/* Dark / Light Mode Toggle */}
             <button
               onClick={() => setIsDarkMode(!isDarkMode)}
