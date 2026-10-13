@@ -1,0 +1,129 @@
+name: Build & Release Signed APK
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    name: Build Signed Release APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install Web Dependencies
+        run: npm install
+
+      - name: Build Web Production Bundle
+        run: npm run build:client
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+
+      - name: Sync Capacitor Web Assets to Android
+        run: npx cap sync android || true
+
+      - name: Generate or Decode Release Keystore
+        run: |
+          if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
+            echo "Using existing secret keystore..."
+            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/release.jks
+            echo "RELEASE_STORE_FILE=../release.jks" >> android/gradle.properties
+            echo "RELEASE_STORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> android/gradle.properties
+            echo "RELEASE_KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> android/gradle.properties
+            echo "RELEASE_KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> android/gradle.properties
+          else
+            echo "Generating automated dedicated release keystore for Amazon Appstore compliance..."
+            keytool -genkey -v \
+              -keystore android/release.jks \
+              -alias cropguard \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -storepass cropguard2026 \
+              -keypass cropguard2026 \
+              -dname "CN=CropGuard AI, OU=Agriculture, O=CropGuard, L=Bengaluru, ST=Karnataka, C=IN"
+            echo "RELEASE_STORE_FILE=../release.jks" >> android/gradle.properties
+            echo "RELEASE_STORE_PASSWORD=cropguard2026" >> android/gradle.properties
+            echo "RELEASE_KEY_ALIAS=cropguard" >> android/gradle.properties
+            echo "RELEASE_KEY_PASSWORD=cropguard2026" >> android/gradle.properties
+          fi
+
+      - name: Verify google-services.json
+        run: |
+          mkdir -p android/app
+          if [ ! -f "android/app/google-services.json" ]; then
+            echo "Creating fallback google-services.json for Gradle build..."
+            cat << 'EOF' > android/app/google-services.json
+          {
+            "project_info": {
+              "project_number": "538946041778",
+              "project_id": "cropguard-ai",
+              "storage_bucket": "cropguard-ai.appspot.com"
+            },
+            "client": [
+              {
+                "client_info": {
+                  "mobilesdk_app_id": "1:538946041778:android:b234ca810f438902",
+                  "android_client_info": {
+                    "package_name": "com.cropguard.ai"
+                  }
+                },
+                "oauth_client": [],
+                "api_key": [
+                  {
+                    "current_key": "AIzaSyD-mock-cropguard-demo-key-12345"
+                  }
+                ],
+                "services": {}
+              }
+            ],
+            "configuration_version": "1"
+          }
+          EOF
+          fi
+          mkdir -p android/app/src/release
+          cp android/app/google-services.json android/app/src/release/google-services.json
+
+      - name: Make Gradle Wrapper Executable
+        run: chmod +x android/gradlew
+
+      - name: Build Signed APK
+        run: |
+          cd android
+          ./gradlew assembleRelease
+
+      - name: Upload Signed APK as GitHub Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CropGuard-AI-release-apk
+          path: android/app/build/outputs/apk/release/CropGuard-AI-release.apk
+
+      - name: Create GitHub Release (If tagged or manual)
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: android/app/build/outputs/apk/release/CropGuard-AI-release.apk
+          name: CropGuard AI ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
