@@ -4,12 +4,10 @@ import path from 'path';
 import { defineConfig } from 'vite';
 
 export default defineConfig(() => {
-return {
-// Replace this with your actual GitHub repository name.
-// Example: https://username.github.io/cropguard-ai/
-base: '/cropguard-ai/',
+  return {
+    base: process.env.VITE_BASE_PATH || './',
 
-publicDir: 'public',
+    publicDir: 'public',
 
 plugins: [
   react(),
