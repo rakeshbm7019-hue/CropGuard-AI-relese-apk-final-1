@@ -68,8 +68,8 @@ android {
 
 dependencies {
     // Capacitor Android Bridge (Connects Web UI into Native APK)
-    implementation 'com.capacitorjs:core:6.0.0'
-    implementation 'com.capacitorjs:android:6.0.0'
+    implementation project(':capacitor-android')
+    implementation project(':capacitor-cordova-android-plugins')
 
     implementation 'androidx.core:core-ktx:1.15.0'
     implementation 'androidx.appcompat:appcompat:1.7.0'
