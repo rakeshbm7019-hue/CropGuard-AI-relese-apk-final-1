@@ -5418,6 +5418,19 @@ async function startServer() {
       server: { middlewareMode: true },
       appType: "spa",
     });
+
+    // Intercept SEO requests before Vite SPA fallback turns them into HTML
+    app.use((req, res, next) => {
+      const cleanPath = (req.path || "").toLowerCase();
+      if (cleanPath === "/sitemap.xml" || cleanPath === "/sitemap.xml/" || cleanPath === "/api/sitemap.xml") {
+        return serveSitemapXml(res);
+      }
+      if (cleanPath === "/robots.txt" || cleanPath === "/robots.txt/" || cleanPath === "/api/robots.txt") {
+        return serveRobotsTxt(res);
+      }
+      next();
+    });
+
     app.use(vite.middlewares);
   } else {
     const cwdDist = path.join(process.cwd(), "dist");

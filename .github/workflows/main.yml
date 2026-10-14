@@ -104,6 +104,9 @@ jobs:
           cp android/app/google-services.json android/app/src/release/google-services.json
           # Purge any residual orientation splash drawable folders that cause AAPT compilation errors
           rm -rf android/app/src/main/res/drawable-port-* android/app/src/main/res/drawable-land-* android/app/src/main/res/drawable-v24 || true
+          # Ensure splash.png exists using high-res app logo
+          mkdir -p android/app/src/main/res/drawable
+          cp public/logo.png android/app/src/main/res/drawable/splash.png || true
 
       - name: Make Gradle Wrapper Executable
         run: chmod +x android/gradlew
