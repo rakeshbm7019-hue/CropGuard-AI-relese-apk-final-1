@@ -211,7 +211,34 @@ export const FertilizerShopFinder: React.FC<FertilizerShopFinderProps> = ({
               provider: providerName,
             });
           }
-        } catch (_) {}
+        } catch (_) {
+          // Direct client-side reverse geocoding fallback for APK
+          try {
+            const bdcRes = await fetch(
+              `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`
+            );
+            if (bdcRes.ok) {
+              const bdc = await bdcRes.json();
+              areaName = bdc.locality || bdc.neighbourhood || "";
+              talukName = bdc.localityInfo?.administrative?.[3]?.name || bdc.city || "";
+              districtName = bdc.localityInfo?.administrative?.[2]?.name || bdc.principalSubdivision || "";
+              stateName = bdc.principalSubdivision || "";
+              locLabel = [areaName, talukName, districtName, stateName].filter(Boolean).join(", ");
+              providerName = "Device Live GPS";
+
+              setExactGpsDetails({
+                lat,
+                lng,
+                formattedCoords: `${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E`,
+                area: areaName,
+                taluk: talukName,
+                district: districtName,
+                state: stateName,
+                provider: providerName,
+              });
+            }
+          } catch (e2) {}
+        }
 
         const finalLoc = locLabel || resolvedLocationName;
         setResolvedLocationName(finalLoc);

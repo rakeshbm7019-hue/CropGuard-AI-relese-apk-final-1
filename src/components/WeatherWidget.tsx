@@ -50,20 +50,106 @@ export const WeatherWidget: React.FC<WeatherWidgetProps> = ({ language }) => {
         payload.location = currentLocationName;
       }
 
-      const response = await fetch("/api/weather", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const json = await response.json();
-      setLoading(false);
-      if (json.success && json.data) {
-        setWeather(json.data);
-        if (json.data.locationName) {
-          setCurrentLocationName(json.data.locationName);
+      try {
+        const response = await fetch("/api/weather", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const json = await response.json();
+        if (json.success && json.data) {
+          setLoading(false);
+          setWeather(json.data);
+          if (json.data.locationName) {
+            setCurrentLocationName(json.data.locationName);
+          }
+          setSelectedForecastIndex(0);
+          return;
         }
+      } catch (_) {
+        // Fallback directly to client-side Open-Meteo API when running standalone offline or in APK
+      }
+
+      // Direct Open-Meteo Client Call for 100% Guaranteed Weather in APK
+      const targetLat = lat ?? 15.4589;
+      const targetLon = lon ?? 75.0078;
+      const omRes = await fetch(
+        `https://api.open-meteo.com/v1/forecast?latitude=${targetLat}&longitude=${targetLon}&current_weather=true&hourly=temperature_2m,relativehumidity_2m,precipitation_probability,weathercode,windspeed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weathercode,windspeed_10m_max,uv_index_max&timezone=auto`
+      );
+      const omData = await omRes.json();
+      if (omData?.current_weather) {
+        const cur = omData.current_weather;
+        const daily = omData.daily || {};
+        const hourly = omData.hourly || {};
+        const rainChance = daily.precipitation_probability_max?.[0] ?? 10;
+        const humidity = hourly.relativehumidity_2m?.[0] ?? 65;
+        const uv = daily.uv_index_max?.[0] ?? 6;
+
+        let sprayCond: "Optimal" | "Caution" | "Avoid" = "Optimal";
+        let sprayAdv = "Weather is clear & calm. Excellent window for morning fungicide/pesticide spray.";
+        if (rainChance > 45 || cur.weathercode >= 60) {
+          sprayCond = "Avoid";
+          sprayAdv = "Rain/showers forecast today. Avoid chemical spraying as wash-off will occur.";
+        } else if (cur.windspeed > 16 || humidity > 85) {
+          sprayCond = "Caution";
+          sprayAdv = "Elevated wind/humidity. If spraying, use early morning (6:00 AM - 8:30 AM) with a surfactant.";
+        }
+
+        const fallbackForecast = (daily.time || []).slice(0, 7).map((timeStr: string, idx: number) => {
+          const d = new Date(timeStr);
+          const dayName = d.toLocaleDateString("en-US", { weekday: "short" });
+          const code = daily.weathercode?.[idx] ?? 0;
+          let cond = "Sunny";
+          if (code >= 60) cond = "Rain";
+          else if (code >= 1 && code <= 3) cond = "Partly Cloudy";
+          else if (code >= 45) cond = "Foggy";
+
+          return {
+            date: dayName,
+            maxTemp: Math.round(daily.temperature_2m_max?.[idx] ?? 30),
+            minTemp: Math.round(daily.temperature_2m_min?.[idx] ?? 20),
+            condition: cond,
+            rainChance: daily.precipitation_probability_max?.[idx] ?? 10,
+            uvIndex: daily.uv_index_max?.[idx] ?? 6,
+            windSpeed: Math.round(daily.windspeed_10m_max?.[idx] ?? 12),
+          };
+        });
+
+        const resolvedName = locStr || currentLocationName || (lat && lon ? `Live Field (${lat.toFixed(2)}°, ${lon.toFixed(2)}°)` : "Live Field Location");
+        setWeather({
+          locationName: resolvedName,
+          temp: Math.round(cur.temperature),
+          tempC: Math.round(cur.temperature),
+          feelsLike: Math.round(cur.temperature + 1),
+          condition: cur.weathercode >= 60 ? "Rainy" : cur.weathercode >= 1 && cur.weathercode <= 3 ? "Partly Cloudy" : "Clear Sky",
+          humidity,
+          windSpeed: Math.round(cur.windspeed),
+          rainProbability: rainChance,
+          uvIndex: uv,
+          sprayCondition: sprayCond,
+          sprayAdvice: sprayAdv,
+          sprayAdvisory: {
+            safeToSpray: sprayCond === "Optimal",
+            reason: sprayAdv,
+            bestTimeWindow: "Early morning 6:00 AM - 9:00 AM",
+          },
+          forecast: fallbackForecast.map((f: any) => ({
+            day: f.date,
+            date: f.date,
+            temp: f.maxTemp,
+            tempMax: f.maxTemp,
+            tempMin: f.minTemp,
+            condition: f.condition,
+            rainProb: f.rainChance,
+            humidity: 65,
+            windSpeed: f.windSpeed,
+            farmingAdvice: f.condition === "Rain" ? "Postpone spraying due to rain." : "Good conditions for agricultural work.",
+          })),
+        });
+        setCurrentLocationName(resolvedName);
         setSelectedForecastIndex(0);
       }
+      setLoading(false);
     } catch (err) {
       setLoading(false);
     }

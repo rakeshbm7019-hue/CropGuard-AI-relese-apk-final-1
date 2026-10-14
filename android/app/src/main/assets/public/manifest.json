@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "CropGuard AI - Early Detection & Integrated Pest Management",
+  "name": "CropGuard AI",
   "short_name": "CropGuard AI",
-  "description": "AI-powered crop disease scanner, ICAR treatment plans, live mandi prices, fertilizer locator, and agriculture assistant.",
+  "description": "Precision agriculture crop disease scanner, ICAR treatment plans, live mandi prices, fertilizer locator, and agriculture assistant.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
