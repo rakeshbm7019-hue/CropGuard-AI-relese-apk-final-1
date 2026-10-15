@@ -46,7 +46,7 @@ const serveSitemapXml = (res: express.Response) => {
   const fallbackSitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://cropguard-ai-crop-disease-agri-assistant.ai.studio/</loc>
+    <loc>https://cropguardaimtr.netlify.app/</loc>
   </url>
 </urlset>
 `;
@@ -76,7 +76,7 @@ const serveRobotsTxt = (res: express.Response) => {
   const fallbackRobots = `User-agent: *
 Allow: /
 
-Sitemap: https://cropguard-ai-crop-disease-agri-assistant.ai.studio/sitemap.xml
+Sitemap: https://cropguardaimtr.netlify.app/sitemap.xml
 `;
   return res.end(fallbackRobots);
 };
