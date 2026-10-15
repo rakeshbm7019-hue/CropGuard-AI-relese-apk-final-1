@@ -126,8 +126,6 @@ export const Header: React.FC<HeaderProps> = ({
     { id: "shops", label: t.tabShops, icon: "🏪" },
     { id: "ai_agent", label: t.tabAiAgent, icon: "🤖" },
     { id: "alerts", label: t.tabAlerts || "Seasonal Alerts", icon: "🔔" },
-    { id: "history", label: "Scan History", icon: "📋" },
-    { id: "offline", label: "Disease Manual", icon: "📖" },
   ];
 
   return (
@@ -264,18 +262,6 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <span>📜</span>
             <span>{t.tabHistory}</span>
-          </button>
-
-          <button
-            onClick={() => setCurrentTab("offline")}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition-all ${
-              currentTab === "offline"
-                ? "bg-amber-50 text-amber-900 border border-amber-200/80 shadow-2xs dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800"
-                : "text-stone-600 dark:text-zinc-400 hover:bg-stone-100 dark:hover:bg-zinc-800 hover:text-stone-900 dark:hover:text-white"
-            }`}
-          >
-            <span>📖</span>
-            <span>{t.tabOffline}</span>
           </button>
         </nav>
       )}

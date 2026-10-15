@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { Language, WeatherInfo } from "../types";
 import { UI_TRANSLATIONS } from "../data/translations";
+import { Geolocation } from "@capacitor/geolocation";
 
 interface WeatherWidgetProps {
   language: Language;
@@ -155,36 +156,56 @@ export const WeatherWidget: React.FC<WeatherWidgetProps> = ({ language }) => {
     }
   };
 
-  // Live GPS Permission Request Handler
-  const handleRequestGpsWeather = () => {
-    if (!("geolocation" in navigator)) {
-      setGpsStatusMsg(t.gpsNotSupported || "GPS Geolocation is not supported by your browser. Please search by village or district name.");
-      fetchWeather();
-      return;
-    }
-
+  // Live GPS Permission Request Handler using Capacitor Geolocation
+  const handleRequestGpsWeather = async () => {
     setLoading(true);
     setGpsStatusMsg(t.detectingLocation || "Detecting live location to fetch real-time field weather...");
 
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const lat = pos.coords.latitude;
-        const lon = pos.coords.longitude;
-        setIsGpsActive(true);
-        setGpsStatusMsg(t.gpsConnected || `📍 Live Location Connected (${lat.toFixed(3)}°N, ${lon.toFixed(3)}°E). Showing real-time field weather.`);
-        fetchWeather(undefined, lat, lon);
-      },
-      (err) => {
+    try {
+      // Request permissions first via Capacitor Geolocation
+      const perm = await Geolocation.requestPermissions();
+      if (perm.location !== "granted" && perm.coarseLocation !== "granted") {
+        setGpsStatusMsg(t.gpsDenied || "GPS permission was denied. Showing weather or search any village, taluka, or district name below.");
         setIsGpsActive(false);
-        if (err.code === err.PERMISSION_DENIED) {
-          setGpsStatusMsg(t.gpsDenied || "GPS permission was denied. Showing weather or search any village, taluka, or district name below.");
-        } else {
-          setGpsStatusMsg(t.gpsError || "Unable to retrieve GPS coordinates automatically. Please search your location below.");
-        }
         fetchWeather();
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
+        return;
+      }
+
+      const coordinates = await Geolocation.getCurrentPosition({
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0,
+      });
+
+      const lat = coordinates.coords.latitude;
+      const lon = coordinates.coords.longitude;
+      setIsGpsActive(true);
+      setGpsStatusMsg(t.gpsConnected || `📍 Live Location Connected (${lat.toFixed(3)}°N, ${lon.toFixed(3)}°E). Showing real-time field weather.`);
+      fetchWeather(undefined, lat, lon);
+    } catch (err: any) {
+      // Fallback to web navigator.geolocation if Capacitor plugin fails
+      if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const lat = pos.coords.latitude;
+            const lon = pos.coords.longitude;
+            setIsGpsActive(true);
+            setGpsStatusMsg(t.gpsConnected || `📍 Live Location Connected (${lat.toFixed(3)}°N, ${lon.toFixed(3)}°E). Showing real-time field weather.`);
+            fetchWeather(undefined, lat, lon);
+          },
+          (error) => {
+            setIsGpsActive(false);
+            setGpsStatusMsg(t.gpsError || "Unable to retrieve GPS coordinates automatically. Please search your location below.");
+            fetchWeather();
+          },
+          { enableHighAccuracy: true, timeout: 10000 }
+        );
+      } else {
+        setIsGpsActive(false);
+        setGpsStatusMsg(t.gpsNotSupported || "GPS Geolocation is not supported.");
+        fetchWeather();
+      }
+    }
   };
 
   // Initial load: automatically request live device location

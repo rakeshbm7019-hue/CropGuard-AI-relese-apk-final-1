@@ -9,6 +9,7 @@
         "@capacitor/android": "^8.5.2",
         "@capacitor/cli": "^8.5.2",
         "@capacitor/core": "^8.5.2",
+        "@capacitor/geolocation": "^8.2.3",
         "@capacitor/local-notifications": "^8.3.1",
         "@google/genai": "^2.4.0",
         "@supabase/supabase-js": "^2.114.0",
@@ -86,7 +87,11 @@
 
     "@capacitor/core": ["@capacitor/core@8.5.2", "", { "dependencies": { "tslib": "^2.1.0" } }, "sha512-agnQbGdhGw/KZFuLf7H9SY2o+oE7upkr/WPQsYaokXP6f9chaE8iVmbKkfN6SVl4w3pmz7oZ3Ur1hbkmy1hx+w=="],
 
+    "@capacitor/geolocation": ["@capacitor/geolocation@8.2.3", "", { "dependencies": { "@capacitor/synapse": "^1.0.4" }, "peerDependencies": { "@capacitor/core": ">=8.0.0" } }, "sha512-tJWi6Vmj1tncFaFpruxrmXRsmvDb8i9Pp6Z04Bxsp39JeBavvvtHPMaNVf/jN/lKlohI8i7BqHqbrDVq3RD+cA=="],
+
     "@capacitor/local-notifications": ["@capacitor/local-notifications@8.3.1", "", { "peerDependencies": { "@capacitor/core": ">=8.0.0" } }, "sha512-F7zu/+p/mIR958YP4axOkeI5hBKRaXDyYjbNPrAil2wWfd7OxScPSTvP9t85NpQ0eULVRu0/sntoxOg6ck477A=="],
+
+    "@capacitor/synapse": ["@capacitor/synapse@1.0.4", "", {}, "sha512-/C1FUo8/OkKuAT4nCIu/34ny9siNHr9qtFezu4kxm6GY1wNFxrCFWjfYx5C1tUhVGz3fxBABegupkpjXvjCHrw=="],
 
     "@esbuild/aix-ppc64": ["@esbuild/aix-ppc64@0.25.12", "", { "os": "aix", "cpu": "ppc64" }, "sha512-Hhmwd6CInZ3dwpuGTF8fJG6yoWmsToE+vYgD4nytZVxcu1ulHpUQRAB1UJ8+N1Am3Mz4+xOByoQoSZf4D+CpkA=="],
 
