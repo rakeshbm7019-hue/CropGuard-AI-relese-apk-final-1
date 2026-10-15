@@ -237,13 +237,13 @@ export const FertilizerShopFinder: React.FC<FertilizerShopFinderProps> = ({
 
             // Clean generic administrative placeholders
             if (!districtName || districtName.toLowerCase().includes("division") || districtName.toLowerCase().includes("center")) {
-              districtName = talukName || areaName || "Bangalore Rural";
+              districtName = talukName || areaName || "Bengaluru Urban";
             }
-            if (!talukName) {
+            if (!talukName || talukName === districtName) {
               talukName = `${districtName} Taluk`;
             }
             if (!areaName) {
-              areaName = `${talukName} APMC Yard`;
+              areaName = `${talukName} APMC Market`;
             }
 
             locLabel = [areaName, talukName, districtName, stateName].filter(Boolean).join(", ");
@@ -263,13 +263,12 @@ export const FertilizerShopFinder: React.FC<FertilizerShopFinderProps> = ({
         } catch (e2) {}
       }
 
-      // If still empty or unresolved, derive from nearest Indian agricultural district
+      // If still empty or unresolved, derive from coordinate heuristic
       if (!districtName || districtName === "District Center" || districtName.includes("Field Worker")) {
-        // Hassan / Alur / Dharwad / Bangalore coordinate heuristic
         if (lat >= 12.8 && lat <= 13.5 && lng >= 77.0 && lng <= 78.0) {
-          areaName = "APMC Yard / Market Center";
-          talukName = "Bangalore Rural Taluk";
-          districtName = "Bangalore Rural";
+          areaName = "Bengaluru City";
+          talukName = "Bengaluru North Taluk";
+          districtName = "Bengaluru Urban";
           stateName = "Karnataka";
         } else if (lat >= 12.6 && lat <= 13.5 && lng >= 75.5 && lng <= 76.6) {
           areaName = "Alur / APMC Market";

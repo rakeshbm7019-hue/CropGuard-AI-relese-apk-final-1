@@ -348,10 +348,16 @@ export function lookupKnownTaluk(
     .replace(/\b(taluk|tq|dist|district|division|subdivision|revenue division)\b/gi, "")
     .trim();
 
-  // 1. Check Hassan Taluk Aliases first
+  // 1. Check Hassan Taluk Aliases with strict word matching
   if (clean) {
+    const cleanWords = clean.split(/[\s,./\-_]+/).filter((w) => w.length >= 2);
     for (const item of HASSAN_TALUKS) {
-      if (item.aliases.some((a) => clean === a || clean.includes(a) || a.includes(clean))) {
+      if (
+        item.aliases.some((a) => {
+          if (clean === a) return true;
+          return cleanWords.includes(a);
+        })
+      ) {
         return {
           taluk: item.taluk,
           district: item.district,
@@ -855,16 +861,17 @@ export async function reverseGeocodeCoordinates(
   let cleanDistrict = cleanLocationName(district);
   let cleanState = cleanLocationName(state);
 
-  // Cross-verify with known taluk database (e.g. Alur is strictly Alur Taluk in Hassan District)
-  const talukHit =
-    lookupKnownTaluk(cleanArea, lat, lng) ||
-    lookupKnownTaluk(cleanTaluk, lat, lng) ||
-    lookupKnownTaluk(displayName || "", lat, lng) ||
-    lookupKnownTaluk("", lat, lng);
-  if (talukHit) {
-    cleanTaluk = talukHit.taluk;
-    cleanDistrict = talukHit.district;
-    cleanState = talukHit.state;
+  // Only cross-verify or enhance with known taluk database if district is missing, generic, or taluk genuinely matches
+  if (!cleanDistrict || cleanDistrict === "District Center" || !cleanTaluk) {
+    const talukHit =
+      lookupKnownTaluk(cleanArea, lat, lng) ||
+      lookupKnownTaluk(cleanTaluk, lat, lng) ||
+      lookupKnownTaluk(displayName || "", lat, lng);
+    if (talukHit) {
+      if (!cleanTaluk) cleanTaluk = talukHit.taluk;
+      if (!cleanDistrict || cleanDistrict === "District Center") cleanDistrict = talukHit.district;
+      if (!cleanState) cleanState = talukHit.state;
+    }
   }
 
   // Construct formatted hierarchical location with exact Area, Taluk, District

@@ -941,24 +941,10 @@ export function getTailoredShopsForLocation(
   // Generate 24 localized licensed agricultural input stores for the farmer's exact area/taluka/district (strict no divisions)
   let rawDist = cleanLocationName(userDistrict || locationQuery || "District Center");
   let rawTaluk = cleanLocationName(userTaluk || (userArea ? `${userArea} Taluk` : `${rawDist} Taluk`));
-  let rawArea = cleanLocationName(userArea || "APMC Market Yard");
-  let rawState = cleanLocationName(userState || "India");
+  let rawArea = cleanLocationName(userArea || `${rawTaluk} APMC Market`);
+  let rawState = cleanLocationName(userState || "Karnataka");
 
   const combinedCheck = `${rawArea} ${rawTaluk} ${rawDist} ${locationQuery}`.toLowerCase();
-  
-  // Coordinate check for Hassan District & Alur Taluk
-  if (hasCoords && userLat! >= 12.6 && userLat! <= 13.5 && userLng! >= 75.5 && userLng! <= 76.6) {
-    const distToAlur = calculateHaversineDistanceKm(userLat!, userLng!, 12.9892, 75.9867);
-    const distToHassan = calculateHaversineDistanceKm(userLat!, userLng!, 13.0072, 76.1030);
-    if (distToAlur < distToHassan || distToAlur <= 16) {
-      rawTaluk = "Alur Taluk";
-      rawDist = "Hassan";
-      rawState = "Karnataka";
-      if (!rawArea || rawArea.toLowerCase().includes("district") || rawArea.toLowerCase().includes("taluk") || rawArea === "APMC Market Yard") {
-        rawArea = "Alur Town / APMC Market";
-      }
-    }
-  }
 
   if (combinedCheck.includes("alur") || combinedCheck.includes("aloor")) {
     rawTaluk = "Alur Taluk";

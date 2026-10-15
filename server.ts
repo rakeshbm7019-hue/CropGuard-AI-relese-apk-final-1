@@ -2649,19 +2649,20 @@ app.post("/api/shops/search", async (req, res) => {
   resolvedState = cleanLocationName(resolvedState);
   resolvedGpsLocationName = cleanLocationName(resolvedGpsLocationName);
 
-  // Cross-verify with known taluk database (e.g. Alur is strictly Alur Taluk, Hassan District)
-  const talukHit =
-    lookupKnownTaluk(resolvedArea, numericLat, numericLng) ||
-    lookupKnownTaluk(resolvedTaluk, numericLat, numericLng) ||
-    lookupKnownTaluk(query, numericLat, numericLng) ||
-    lookupKnownTaluk(resolvedGpsLocationName, numericLat, numericLng) ||
-    lookupKnownTaluk("", numericLat, numericLng);
-  if (talukHit) {
-    resolvedTaluk = talukHit.taluk;
-    resolvedDistrict = talukHit.district;
-    resolvedState = talukHit.state;
-    if (!resolvedArea || resolvedArea.toLowerCase().includes("district") || resolvedArea === "Market Yard") {
-      resolvedArea = cleanLocationName(talukHit.taluk.replace(/taluk/i, "").trim());
+  // Only cross-verify or enhance with known taluk database if district is missing or generic
+  if (!resolvedDistrict || resolvedDistrict === "District Center" || !resolvedTaluk) {
+    const talukHit =
+      lookupKnownTaluk(resolvedArea, numericLat, numericLng) ||
+      lookupKnownTaluk(resolvedTaluk, numericLat, numericLng) ||
+      lookupKnownTaluk(query, numericLat, numericLng) ||
+      lookupKnownTaluk(resolvedGpsLocationName, numericLat, numericLng);
+    if (talukHit) {
+      if (!resolvedTaluk) resolvedTaluk = talukHit.taluk;
+      if (!resolvedDistrict || resolvedDistrict === "District Center") resolvedDistrict = talukHit.district;
+      if (!resolvedState) resolvedState = talukHit.state;
+      if (!resolvedArea || resolvedArea.toLowerCase().includes("district") || resolvedArea === "Market Yard") {
+        resolvedArea = cleanLocationName(talukHit.taluk.replace(/taluk/i, "").trim());
+      }
     }
   }
 
