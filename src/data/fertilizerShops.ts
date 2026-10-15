@@ -1081,7 +1081,7 @@ export function getTailoredShopsForLocation(
     ];
 
     const landmark = agriculturalLandmarks[idx % agriculturalLandmarks.length];
-    const address = `${landmark}, ${effectiveArea}, ${effectiveTaluk}, ${effectiveDistrict} District, ${effectiveState} - ${localizedPincode}`;
+    const address = `${landmark}, ${effectiveArea}, ${effectiveState} - ${localizedPincode}`;
 
     const inventoryBase = [
       "Neem Coated Urea (45kg bag)",

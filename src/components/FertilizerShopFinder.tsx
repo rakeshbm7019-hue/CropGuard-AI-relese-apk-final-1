@@ -936,10 +936,6 @@ export const FertilizerShopFinder: React.FC<FertilizerShopFinderProps> = ({
                       <MapPin className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
                       <span>
                         {cleanLocationName(shop.address || shop.landmark || "Local Agricultural Market")}
-                        {shop.area && !shop.address?.includes(shop.area) ? `, ${cleanLocationName(shop.area)}` : ""}
-                        {shop.taluk && !shop.address?.includes(shop.taluk) ? `, ${cleanLocationName(shop.taluk)}` : ""}
-                        {shop.district && !shop.address?.includes(shop.district) ? `, ${cleanLocationName(shop.district)}` : ""}
-                        {shop.state && !shop.address?.includes(shop.state) ? `, ${cleanLocationName(shop.state)}` : ""}
                         {shop.pincode ? ` - ${shop.pincode}` : ""}
                       </span>
                     </div>
