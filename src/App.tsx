@@ -18,6 +18,7 @@ import { CommunityOutbreakRadar } from "./components/CommunityOutbreakRadar";
 import { SprayDosageCalculator } from "./components/SprayDosageCalculator";
 import { SeasonalAdvisor } from "./components/SeasonalAdvisor";
 import { AdBanner } from "./components/AdBanner";
+import { PrivacyPolicy } from "./components/PrivacyPolicy";
 import { showInterstitial } from "./lib/admob";
 import { DiseaseAnalysisResult, Language, UserProfile, AppTheme } from "./types";
 import { APP_THEMES } from "./data/themes";
@@ -30,7 +31,22 @@ import {
 } from "./lib/supabase";
 
 export default function App() {
-  const [currentTab, setCurrentTab] = useState("scan");
+  const [isPrivacyRoute, setIsPrivacyRoute] = useState(() => {
+    if (typeof window !== "undefined") {
+      const p = window.location.pathname.toLowerCase();
+      const tabParam = new URLSearchParams(window.location.search).get("tab");
+      return p === "/privacy-policy" || p === "/privacy-policy/" || tabParam === "privacy-policy";
+    }
+    return false;
+  });
+
+  const [currentTab, setCurrentTab] = useState(() => {
+    if (typeof window !== "undefined") {
+      const p = new URLSearchParams(window.location.search).get("tab");
+      if (p) return p;
+    }
+    return "scan";
+  });
   const [language, setLanguage] = useState<Language>(() => {
     return (localStorage.getItem("cropguard_lang") as Language) || "en";
   });
@@ -59,7 +75,13 @@ export default function App() {
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
   const [realtimeNotification, setRealtimeNotification] = useState<string | null>(null);
-  const [showLanding, setShowLanding] = useState(!user?.isLoggedIn);
+  const [showLanding, setShowLanding] = useState(() => {
+    if (typeof window !== "undefined") {
+      const p = new URLSearchParams(window.location.search);
+      if (p.get("preview") === "true" || p.get("demo") === "true") return false;
+    }
+    return !user?.isLoggedIn;
+  });
 
   // Auto-detect returning Supabase Session & OAuth Redirects, plus real-time auth changes
   useEffect(() => {
@@ -136,6 +158,17 @@ export default function App() {
     }
   }, [isDarkMode]);
 
+  // Synchronize browser history and popstate for direct /privacy-policy URL navigation
+  useEffect(() => {
+    const handlePopState = () => {
+      const p = window.location.pathname.toLowerCase();
+      const tabParam = new URLSearchParams(window.location.search).get("tab");
+      setIsPrivacyRoute(p === "/privacy-policy" || p === "/privacy-policy/" || tabParam === "privacy-policy");
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
   // Load Supabase cloud scans when user logs in
   useEffect(() => {
     if (user?.id) {
@@ -186,6 +219,19 @@ export default function App() {
     localStorage.removeItem("cropguard_history");
     setShowLanding(true);
   };
+
+  if (isPrivacyRoute) {
+    return (
+      <PrivacyPolicy
+        onBackToApp={() => {
+          if (typeof window !== "undefined") {
+            window.history.pushState({}, "", "/");
+          }
+          setIsPrivacyRoute(false);
+        }}
+      />
+    );
+  }
 
   return (
     <div
@@ -244,7 +290,7 @@ export default function App() {
               setShowLanding(false);
             }}
           />
-        ) : !user?.isLoggedIn && currentTab !== "admin" ? (
+        ) : !user?.isLoggedIn && currentTab !== "admin" && (typeof window === "undefined" || (new URLSearchParams(window.location.search).get("preview") !== "true" && new URLSearchParams(window.location.search).get("demo") !== "true")) ? (
           <FarmerAuthGate
             language={language}
             onSuccessLogin={handleSuccessLogin}

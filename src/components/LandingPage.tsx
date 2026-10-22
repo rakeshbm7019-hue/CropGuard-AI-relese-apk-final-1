@@ -260,8 +260,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onOpenAd
           </button>
         </div>
 
-        <div className="text-xs text-stone-500 dark:text-zinc-400 font-medium pt-2">
-          Free Agricultural Resource • No Mandatory Hardware Required • Works on Mobile & Desktop
+        <div className="text-xs text-stone-500 dark:text-zinc-400 font-medium pt-2 flex flex-wrap items-center justify-center gap-3">
+          <span>Free Agricultural Resource</span>
+          <span>•</span>
+          <span>No Mandatory Hardware Required</span>
+          <span>•</span>
+          <span>Works on Mobile &amp; Desktop</span>
+          <span>•</span>
+          <a
+            href="/privacy-policy"
+            className="text-emerald-700 dark:text-emerald-400 hover:underline font-semibold"
+          >
+            Privacy Policy
+          </a>
         </div>
       </section>
     </div>

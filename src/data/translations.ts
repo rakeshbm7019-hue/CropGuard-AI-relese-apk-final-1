@@ -16,7 +16,7 @@ export const LANGUAGE_NAMES: Record<Language, { name: string; native: string; fl
 
 export const UI_TRANSLATIONS: Record<Language, Record<string, any>> = {
   en: {
-    appName: "CropGuard AI",
+    appName: "CropGuard",
     subTitle: "Smart Crop Health & Farmer Assistant",
     tabScan: "Scan Crop",
     tabOutbreaks: "Outbreak Radar",

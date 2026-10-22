@@ -574,6 +574,14 @@ export const FarmerAuthGate: React.FC<FarmerAuthGateProps> = ({
               </form>
             </div>
           )}
+          <div className="pt-2 text-center border-t border-stone-100 dark:border-zinc-800">
+            <a
+              href="/privacy-policy"
+              className="text-xs text-stone-500 dark:text-zinc-400 hover:text-emerald-600 dark:hover:text-emerald-400 underline transition-colors"
+            >
+              Privacy Policy
+            </a>
+          </div>
         </div>
       </div>
     </div>
