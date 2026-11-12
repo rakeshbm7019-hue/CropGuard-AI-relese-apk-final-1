@@ -263,19 +263,6 @@ export const Header: React.FC<HeaderProps> = ({
             <span>📜</span>
             <span>{t.tabHistory}</span>
           </button>
-
-          <button
-            onClick={() => {
-              if (typeof window !== "undefined") {
-                window.location.href = "/privacy-policy";
-              }
-            }}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition-all text-stone-600 dark:text-zinc-400 hover:bg-stone-100 dark:hover:bg-zinc-800 hover:text-stone-900 dark:hover:text-white"
-            title="View CropGuard Privacy Policy"
-          >
-            <span>🛡️</span>
-            <span>Privacy Policy</span>
-          </button>
         </nav>
       )}
     </div>

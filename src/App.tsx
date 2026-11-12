@@ -18,7 +18,6 @@ import { CommunityOutbreakRadar } from "./components/CommunityOutbreakRadar";
 import { SprayDosageCalculator } from "./components/SprayDosageCalculator";
 import { SeasonalAdvisor } from "./components/SeasonalAdvisor";
 import { AdBanner } from "./components/AdBanner";
-import { PrivacyPolicy } from "./components/PrivacyPolicy";
 import { showInterstitialAfterScan } from "./lib/admob";
 import { DiseaseAnalysisResult, Language, UserProfile, AppTheme } from "./types";
 import { APP_THEMES } from "./data/themes";
@@ -31,15 +30,6 @@ import {
 } from "./lib/supabase";
 
 export default function App() {
-  const [isPrivacyRoute, setIsPrivacyRoute] = useState(() => {
-    if (typeof window !== "undefined") {
-      const p = window.location.pathname.toLowerCase();
-      const tabParam = new URLSearchParams(window.location.search).get("tab");
-      return p === "/privacy-policy" || p === "/privacy-policy/" || tabParam === "privacy-policy";
-    }
-    return false;
-  });
-
   const [currentTab, setCurrentTab] = useState(() => {
     if (typeof window !== "undefined") {
       const p = new URLSearchParams(window.location.search).get("tab");
@@ -158,17 +148,6 @@ export default function App() {
     }
   }, [isDarkMode]);
 
-  // Synchronize browser history and popstate for direct /privacy-policy URL navigation
-  useEffect(() => {
-    const handlePopState = () => {
-      const p = window.location.pathname.toLowerCase();
-      const tabParam = new URLSearchParams(window.location.search).get("tab");
-      setIsPrivacyRoute(p === "/privacy-policy" || p === "/privacy-policy/" || tabParam === "privacy-policy");
-    };
-    window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
-  }, []);
-
   // Load Supabase cloud scans when user logs in
   useEffect(() => {
     if (user?.id) {
@@ -221,19 +200,6 @@ export default function App() {
     localStorage.removeItem("cropguard_history");
     setShowLanding(true);
   };
-
-  if (isPrivacyRoute) {
-    return (
-      <PrivacyPolicy
-        onBackToApp={() => {
-          if (typeof window !== "undefined") {
-            window.history.pushState({}, "", "/");
-          }
-          setIsPrivacyRoute(false);
-        }}
-      />
-    );
-  }
 
   return (
     <div

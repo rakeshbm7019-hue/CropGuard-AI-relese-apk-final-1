@@ -4,7 +4,8 @@ import android.os.Bundle
 import android.util.Log
 import com.getcapacitor.BridgeActivity
 import com.google.android.gms.ads.MobileAds
-import com.google.android.gms.ads.InitializationStatus
+import com.google.android.gms.ads.initialization.AdapterStatus
+import com.google.android.gms.ads.initialization.InitializationStatus
 
 class MainActivity : BridgeActivity() {
 
@@ -19,7 +20,7 @@ class MainActivity : BridgeActivity() {
         try {
             Log.d(TAG, "Initializing Google Mobile Ads SDK (App ID: ca-app-pub-6652067022010690~4420290370)...")
             MobileAds.initialize(this) { initializationStatus: InitializationStatus ->
-                val statusMap = initializationStatus.adapterStatusMap
+                val statusMap: Map<String, AdapterStatus> = initializationStatus.adapterStatusMap
                 for ((adapterClass, status) in statusMap) {
                     Log.d(TAG, "AdMob Adapter: $adapterClass | State: ${status.initializationState} | Description: ${status.description} | Latency: ${status.latency}")
                 }
