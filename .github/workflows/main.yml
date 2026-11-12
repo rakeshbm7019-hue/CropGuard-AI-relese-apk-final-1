@@ -39,7 +39,7 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
 
       - name: Sync Capacitor Web Assets to Android
-        run: npx cap sync android || true
+        run: npx cap sync android
 
       - name: Generate or Decode Release Keystore
         run: |
@@ -67,7 +67,7 @@ jobs:
             echo "RELEASE_KEY_PASSWORD=cropguard2026" >> android/gradle.properties
           fi
 
-      - name: Verify google-services.json
+      - name: Verify google-services.json & Clean Drawables
         run: |
           mkdir -p android/app
           if [ ! -f "android/app/google-services.json" ]; then
@@ -118,20 +118,32 @@ jobs:
       - name: Build Signed APK
         run: |
           cd android
-          ./gradlew assembleRelease
+          ./gradlew assembleRelease --stacktrace
+
+      - name: Locate Generated APK
+        id: locate_apk
+        run: |
+          APK_PATH=$(find android/app/build/outputs/apk/release/ -name "*.apk" | head -n 1)
+          if [ -z "$APK_PATH" ] || [ ! -f "$APK_PATH" ]; then
+            echo "ERROR: Release APK was not found!"
+            find android/app/build/outputs/ -type f || true
+            exit 1
+          fi
+          echo "Found APK at: $APK_PATH"
+          echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
 
       - name: Upload Signed APK as GitHub Artifact
         uses: actions/upload-artifact@v4
         with:
           name: CropGuard-AI-release-apk
-          path: android/app/build/outputs/apk/release/CropGuard-AI-release.apk
+          path: ${{ steps.locate_apk.outputs.apk_path }}
           if-no-files-found: error
 
       - name: Create GitHub Release (If tagged or manual)
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: android/app/build/outputs/apk/release/CropGuard-AI-release.apk
+          files: ${{ steps.locate_apk.outputs.apk_path }}
           name: CropGuard AI ${{ github.ref_name }}
           draft: false
           prerelease: false

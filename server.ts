@@ -81,6 +81,26 @@ Sitemap: https://cropguardaimtr.netlify.app/sitemap.xml
   return res.end(fallbackRobots);
 };
 
+const serveAppAdsTxt = (res: express.Response) => {
+  res.status(200);
+  res.setHeader("Content-Type", "text/plain; charset=utf-8");
+  res.setHeader("Cache-Control", "public, max-age=0, must-revalidate");
+  const candidates = [
+    path.join(process.cwd(), "public", "app-ads.txt"),
+    path.join(process.cwd(), "dist", "app-ads.txt"),
+    path.join(process.cwd(), "app-ads.txt"),
+  ];
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      try {
+        const content = fs.readFileSync(candidate, "utf8");
+        return res.end(content);
+      } catch (_) {}
+    }
+  }
+  return res.end("google.com, pub-6652067022010690, DIRECT, f08c47fec0942fa0\n");
+};
+
 // Sitemap Route (Direct XML delivery)
 app.get(["/sitemap.xml", "/sitemap.xml/", "/api/sitemap.xml", "/api/sitemap.xml/"], (req, res) => {
   return serveSitemapXml(res);
@@ -89,6 +109,11 @@ app.get(["/sitemap.xml", "/sitemap.xml/", "/api/sitemap.xml", "/api/sitemap.xml/
 // Robots.txt Route (Direct plain text delivery)
 app.get(["/robots.txt", "/robots.txt/", "/api/robots.txt", "/api/robots.txt/"], (req, res) => {
   return serveRobotsTxt(res);
+});
+
+// app-ads.txt Route for Google AdMob Verification
+app.get(["/app-ads.txt", "/app-ads.txt/", "/api/app-ads.txt", "/api/app-ads.txt/"], (req, res) => {
+  return serveAppAdsTxt(res);
 });
 
 // --- SUPABASE POSTGRESQL (FREE TIER) CLIENT ---
@@ -5429,6 +5454,9 @@ async function startServer() {
       if (cleanPath === "/robots.txt" || cleanPath === "/robots.txt/" || cleanPath === "/api/robots.txt") {
         return serveRobotsTxt(res);
       }
+      if (cleanPath === "/app-ads.txt" || cleanPath === "/app-ads.txt/" || cleanPath === "/api/app-ads.txt") {
+        return serveAppAdsTxt(res);
+      }
       next();
     });
 
@@ -5444,6 +5472,9 @@ async function startServer() {
       }
       if (cleanPath === "/robots.txt" || cleanPath === "/robots.txt/" || cleanPath === "/api/robots.txt") {
         return serveRobotsTxt(res);
+      }
+      if (cleanPath === "/app-ads.txt" || cleanPath === "/app-ads.txt/" || cleanPath === "/api/app-ads.txt") {
+        return serveAppAdsTxt(res);
       }
       res.sendFile(path.join(distPath, "index.html"));
     });

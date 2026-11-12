@@ -6,14 +6,24 @@ import { showBanner, hideBanner } from "../lib/admob";
 interface AdBannerProps {
   className?: string;
   slotId?: string;
+  autoShow?: boolean;
 }
 
-export const AdBanner: React.FC<AdBannerProps> = ({ className = "", slotId = "default-slot" }) => {
+/**
+ * AdBanner Component:
+ * - On Native Android (Capacitor), requests the bottom adaptive banner using real AdMob IDs.
+ * - On Web preview, stays cleanly hidden without rendering broken or blank blocks.
+ * - Manages plugin lifecycle events (Loaded, FailedToLoad).
+ */
+export const AdBanner: React.FC<AdBannerProps> = ({
+  className = "",
+  slotId = "default-slot",
+  autoShow = true,
+}) => {
   const [adLoaded, setAdLoaded] = useState(false);
   const isNative = Capacitor.isNativePlatform();
 
   useEffect(() => {
-    // If running in browser or web preview, AdMob is not active -> keep hidden
     if (!isNative) {
       setAdLoaded(false);
       return;
@@ -31,7 +41,9 @@ export const AdBanner: React.FC<AdBannerProps> = ({ className = "", slotId = "de
         setAdLoaded(false);
       });
 
-      showBanner();
+      if (autoShow) {
+        showBanner();
+      }
     } catch (_) {
       setAdLoaded(false);
     }
@@ -41,19 +53,18 @@ export const AdBanner: React.FC<AdBannerProps> = ({ className = "", slotId = "de
         if (loadedListener && typeof loadedListener.remove === "function") loadedListener.remove();
         if (failedListener && typeof failedListener.remove === "function") failedListener.remove();
       } catch (_) {}
-      hideBanner();
     };
-  }, [slotId, isNative]);
+  }, [slotId, isNative, autoShow]);
 
-  // If AdMob is not active or no ad has loaded, render nothing (no blank/empty space)
-  if (!adLoaded) {
+  // If not native or ad not loaded, do not leave empty gap
+  if (!isNative || !adLoaded) {
     return null;
   }
 
-  // When AdMob banner is active and loaded, render minimal reserved banner frame
+  // Reserves space so content does not get hidden behind native overlay banner
   return (
     <div
-      className={`w-full overflow-hidden my-2 flex justify-center items-center ${className}`}
+      className={`w-full overflow-hidden my-2 flex justify-center items-center select-none pointer-events-none ${className}`}
       id={`ad-slot-${slotId}`}
       aria-hidden="true"
     >

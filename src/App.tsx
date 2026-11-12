@@ -19,7 +19,7 @@ import { SprayDosageCalculator } from "./components/SprayDosageCalculator";
 import { SeasonalAdvisor } from "./components/SeasonalAdvisor";
 import { AdBanner } from "./components/AdBanner";
 import { PrivacyPolicy } from "./components/PrivacyPolicy";
-import { showInterstitial } from "./lib/admob";
+import { showInterstitialAfterScan } from "./lib/admob";
 import { DiseaseAnalysisResult, Language, UserProfile, AppTheme } from "./types";
 import { APP_THEMES } from "./data/themes";
 import {
@@ -195,8 +195,10 @@ export default function App() {
       });
     }
 
-    // Show interstitial ad after scan is completed
-    showInterstitial();
+    // Show interstitial ad after scan is completed with reasonable frequency limits
+    showInterstitialAfterScan().catch((err) => {
+      console.warn("AdMob interstitial notice:", err);
+    });
   };
 
   const handleClearHistory = () => {
@@ -383,6 +385,11 @@ export default function App() {
             setIsAdminLoggedIn={setIsAdminLoggedIn}
           />
         )}
+
+        {/* Global Dashboard Bottom AdMob Banner */}
+        <div className="pt-4 pb-2">
+          <AdBanner slotId="dashboard-bottom-persistent" />
+        </div>
       </main>
 
       {/* Auth Modal (can also be invoked from header or other buttons) */}
