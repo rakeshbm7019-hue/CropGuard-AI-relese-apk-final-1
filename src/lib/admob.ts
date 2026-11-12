@@ -29,15 +29,15 @@ let lastInterstitialShownTimestamp = 0;
 let consecutiveScanCount = 0;
 
 // Frequency capping configuration (reasonable, farmer-friendly limits)
-// Show at most once every 3 minutes AND at least every 2 scans
 const MIN_INTERSTITIAL_INTERVAL_MS = 3 * 60 * 1000; // 3 minutes
 const MIN_SCANS_BETWEEN_INTERSTITIALS = 2; // Every 2nd completed scan
 
 /**
- * Initializes Google Mobile Ads SDK for native Android.
+ * Initializes Google Mobile Ads SDK for native Android with detailed error logging.
  */
 export async function initializeAdMob(): Promise<boolean> {
   if (!Capacitor.isNativePlatform()) {
+    console.log('[AdMob] Running on web platform - AdMob native ads inactive.');
     return false;
   }
 
@@ -46,21 +46,23 @@ export async function initializeAdMob(): Promise<boolean> {
   }
 
   try {
-    // Register global event listeners for diagnostic logs & state tracking
+    // Register detailed diagnostic event listeners
     AdMob.addListener(BannerAdPluginEvents.Loaded, () => {
-      console.log('[AdMob] Banner Ad Loaded');
+      console.log('[AdMob] Banner Ad Loaded Successfully (ID: ' + BANNER_ID + ')');
       isBannerVisible = true;
       isBannerLoading = false;
     });
 
     AdMob.addListener(BannerAdPluginEvents.FailedToLoad, (err: any) => {
-      console.warn('[AdMob] Banner Ad Failed to Load:', err);
+      const errCode = err?.code || err?.errorCode || 'UNKNOWN';
+      const errMsg = err?.message || err?.localizedMessage || JSON.stringify(err);
+      console.error(`[AdMob ERROR] Banner Ad Failed to Load! Code: ${errCode} | Message: ${errMsg} | ID: ${BANNER_ID}`);
       isBannerVisible = false;
       isBannerLoading = false;
     });
 
     AdMob.addListener(BannerAdPluginEvents.Opened, () => {
-      console.log('[AdMob] Banner Ad Opened');
+      console.log('[AdMob] Banner Ad Clicked / Opened');
     });
 
     AdMob.addListener(BannerAdPluginEvents.Closed, () => {
@@ -68,13 +70,15 @@ export async function initializeAdMob(): Promise<boolean> {
     });
 
     AdMob.addListener(InterstitialAdPluginEvents.Loaded, () => {
-      console.log('[AdMob] Interstitial Ad Prepared & Loaded');
+      console.log('[AdMob] Interstitial Ad Prepared & Loaded Successfully (ID: ' + INTERSTITIAL_ID + ')');
       isInterstitialReady = true;
       isInterstitialPreparing = false;
     });
 
     AdMob.addListener(InterstitialAdPluginEvents.FailedToLoad, (err: any) => {
-      console.warn('[AdMob] Interstitial Ad Failed to Load:', err);
+      const errCode = err?.code || err?.errorCode || 'UNKNOWN';
+      const errMsg = err?.message || err?.localizedMessage || JSON.stringify(err);
+      console.error(`[AdMob ERROR] Interstitial Ad Failed to Load! Code: ${errCode} | Message: ${errMsg} | ID: ${INTERSTITIAL_ID}`);
       isInterstitialReady = false;
       isInterstitialPreparing = false;
     });
@@ -83,30 +87,31 @@ export async function initializeAdMob(): Promise<boolean> {
       console.log('[AdMob] Interstitial Ad Dismissed by User');
       isInterstitialReady = false;
       lastInterstitialShownTimestamp = Date.now();
-      // Pre-warm the next interstitial in the background
       prepareInterstitialSilent();
     });
 
     AdMob.addListener(InterstitialAdPluginEvents.FailedToShow, (err: any) => {
-      console.warn('[AdMob] Interstitial Ad Failed to Show:', err);
+      const errCode = err?.code || err?.errorCode || 'UNKNOWN';
+      const errMsg = err?.message || err?.localizedMessage || JSON.stringify(err);
+      console.error(`[AdMob ERROR] Interstitial Ad Failed to Show! Code: ${errCode} | Message: ${errMsg}`);
       isInterstitialReady = false;
     });
 
-    // Initialize the SDK with production settings (no test devices, real ads)
+    // Initialize the SDK with production settings
+    console.log('[AdMob] Calling AdMob.initialize with App ID: ' + ADMOB_APP_ID);
     await AdMob.initialize({
       testingDevices: [],
       initializeForTesting: false,
     });
 
     isInitialized = true;
-    console.log('[AdMob] Google Mobile Ads SDK initialized successfully');
+    console.log('[AdMob] Google Mobile Ads SDK initialized successfully from JS Bridge.');
 
-    // Preload first interstitial ad quietly in background
     prepareInterstitialSilent();
 
     return true;
-  } catch (error) {
-    console.error('[AdMob] Initialization error:', error);
+  } catch (error: any) {
+    console.error('[AdMob CRITICAL] Initialization exception:', error?.message || error, error);
     return false;
   }
 }
@@ -135,18 +140,19 @@ export async function showBanner(): Promise<void> {
     if (!isInitialized) {
       await initializeAdMob();
     }
+    console.log('[AdMob] Requesting bottom banner ad for ID: ' + BANNER_ID);
     await AdMob.showBanner(options);
     isBannerVisible = true;
     isBannerLoading = false;
-  } catch (error) {
-    console.warn('[AdMob] Show banner error:', error);
+  } catch (error: any) {
+    console.error('[AdMob ERROR] Show banner exception:', error?.message || error);
     isBannerVisible = false;
     isBannerLoading = false;
   }
 }
 
 /**
- * Hides and removes the banner ad if needed.
+ * Hides and removes the banner ad.
  */
 export async function hideBanner(): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
@@ -154,13 +160,13 @@ export async function hideBanner(): Promise<void> {
   try {
     await AdMob.hideBanner();
     isBannerVisible = false;
-  } catch (error) {
-    console.warn('[AdMob] Hide banner error:', error);
+  } catch (error: any) {
+    console.warn('[AdMob] Hide banner notice:', error?.message || error);
   }
 }
 
 /**
- * Preloads an interstitial ad silently in the background so it displays instantly when triggered.
+ * Preloads an interstitial ad silently in the background.
  */
 async function prepareInterstitialSilent(): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
@@ -174,23 +180,19 @@ async function prepareInterstitialSilent(): Promise<void> {
   };
 
   try {
+    console.log('[AdMob] Preparing silent interstitial ad for ID: ' + INTERSTITIAL_ID);
     await AdMob.prepareInterstitial(options);
     isInterstitialReady = true;
     isInterstitialPreparing = false;
-  } catch (error) {
-    console.warn('[AdMob] Silent prepare interstitial error:', error);
+  } catch (error: any) {
+    console.error('[AdMob ERROR] Silent prepare interstitial exception:', error?.message || error);
     isInterstitialReady = false;
     isInterstitialPreparing = false;
   }
 }
 
 /**
- * Displays an interstitial ad after a successful crop disease scan,
- * respecting reasonable frequency limits to prevent annoying the farmer.
- *
- * Frequency rules:
- * - Minimum 2 completed scans between ads
- * - Minimum 3 minutes cooldown between interstitial presentations
+ * Displays an interstitial ad after a successful crop disease scan with frequency capping.
  */
 export async function showInterstitialAfterScan(force: boolean = false): Promise<boolean> {
   if (!Capacitor.isNativePlatform()) return false;
@@ -200,10 +202,8 @@ export async function showInterstitialAfterScan(force: boolean = false): Promise
   const timeSinceLastAd = now - lastInterstitialShownTimestamp;
 
   if (!force) {
-    // Check frequency constraints
     if (consecutiveScanCount < MIN_SCANS_BETWEEN_INTERSTITIALS && lastInterstitialShownTimestamp !== 0) {
       console.log(`[AdMob] Interstitial skipped: scan count (${consecutiveScanCount}/${MIN_SCANS_BETWEEN_INTERSTITIALS})`);
-      // Make sure the next ad is pre-warmed
       prepareInterstitialSilent();
       return false;
     }
@@ -226,37 +226,33 @@ export async function showInterstitialAfterScan(force: boolean = false): Promise
       await initializeAdMob();
     }
 
-    // If not already prepared, prepare now with a timeout fallback
     if (!isInterstitialReady) {
       console.log('[AdMob] Interstitial not pre-warmed, preparing now...');
       await AdMob.prepareInterstitial(options);
       isInterstitialReady = true;
     }
 
+    console.log('[AdMob] Showing interstitial ad...');
     await AdMob.showInterstitial();
     lastInterstitialShownTimestamp = Date.now();
     consecutiveScanCount = 0;
     isInterstitialReady = false;
-    console.log('[AdMob] Interstitial successfully displayed to user');
+    console.log('[AdMob] Interstitial successfully displayed.');
     return true;
-  } catch (error) {
-    console.warn('[AdMob] Show interstitial notice:', error);
+  } catch (error: any) {
+    console.error('[AdMob ERROR] Show interstitial exception:', error?.message || error);
     isInterstitialReady = false;
-    // Attempt background reload for next opportunity
     prepareInterstitialSilent();
     return false;
   }
 }
 
-/**
- * Legacy wrapper for showInterstitial with frequency protection.
- */
 export async function showInterstitial(): Promise<void> {
   await showInterstitialAfterScan(false);
 }
 
 /**
- * Rewarded ad integration for bonus feature unlocks.
+ * Rewarded ad integration.
  */
 export async function showRewardedAd(onReward: () => void): Promise<void> {
   if (!Capacitor.isNativePlatform()) {
@@ -283,8 +279,8 @@ export async function showRewardedAd(onReward: () => void): Promise<void> {
     });
 
     await AdMob.showRewardVideoAd();
-  } catch (error) {
-    console.warn('[AdMob] Error showing rewarded ad:', error);
+  } catch (error: any) {
+    console.error('[AdMob ERROR] Rewarded ad exception:', error?.message || error);
   }
 }
 
@@ -303,19 +299,16 @@ export async function showAppOpenAd(): Promise<void> {
     if (!isInitialized) {
       await initializeAdMob();
     }
-    // @ts-ignore - AppOpen may exist depending on platform plugin build
+    // @ts-ignore
     if (typeof AdMob.showAppOpenAd === 'function') {
       // @ts-ignore
       await AdMob.showAppOpenAd(options);
     }
-  } catch (error) {
-    console.warn('[AdMob] App open ad notice:', error);
+  } catch (error: any) {
+    console.warn('[AdMob] App open ad notice:', error?.message || error);
   }
 }
 
-/**
- * Returns current AdMob configuration status for diagnostic checks.
- */
 export function getAdMobStatus() {
   return {
     isNative: Capacitor.isNativePlatform(),

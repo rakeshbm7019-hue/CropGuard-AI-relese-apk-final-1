@@ -4,19 +4,29 @@ import android.os.Bundle
 import android.util.Log
 import com.getcapacitor.BridgeActivity
 import com.google.android.gms.ads.MobileAds
+import com.google.android.gms.ads.InitializationStatus
 
 class MainActivity : BridgeActivity() {
+
+    companion object {
+        private const val TAG = "CropGuardAdMob"
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Initialize Google Mobile Ads (AdMob)
+        // Initialize Google Mobile Ads (AdMob) with detailed error & status logging
         try {
-            MobileAds.initialize(this) { status ->
-                Log.d("CropGuardAI", "AdMob Mobile Ads Initialized: $status")
+            Log.d(TAG, "Initializing Google Mobile Ads SDK (App ID: ca-app-pub-6652067022010690~4420290370)...")
+            MobileAds.initialize(this) { initializationStatus: InitializationStatus ->
+                val statusMap = initializationStatus.adapterStatusMap
+                for ((adapterClass, status) in statusMap) {
+                    Log.d(TAG, "AdMob Adapter: $adapterClass | State: ${status.initializationState} | Description: ${status.description} | Latency: ${status.latency}")
+                }
+                Log.d(TAG, "Google Mobile Ads SDK initialization completed successfully.")
             }
         } catch (e: Exception) {
-            Log.w("CropGuardAI", "AdMob init error: ${e.message}")
+            Log.e(TAG, "CRITICAL: Google Mobile Ads SDK initialization threw exception: ${e.message}", e)
         }
 
         // Initialize Firebase Cloud Messaging Channels & Token
@@ -24,7 +34,7 @@ class MainActivity : BridgeActivity() {
             com.cropguard.ai.services.CropGuardMessagingService.createNotificationChannels(this)
             com.cropguard.ai.services.FcmManager.fetchAndRegisterToken(this)
         } catch (e: Exception) {
-            Log.w("CropGuardAI", "FCM init notice: ${e.message}")
+            Log.w(TAG, "FCM init notice: ${e.message}")
         }
 
         // Request Native Location & Notification Permissions on Startup

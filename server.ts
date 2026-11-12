@@ -2421,7 +2421,7 @@ async function fetchRealShopsFromGooglePlaces(
         verified: true,
         distanceKm: isNaN(distKm) ? 0.2 : distKm,
         openingHours,
-        reviewSnippet: `Verified agricultural dealer (${rating}★ on Google Maps). Government authorized distribution center for fertilizers, seeds & crop sprays.`,
+        reviewSnippet: `Licensed local agro input center offering certified fertilizers and crop protection guidance.`,
         mapsUri,
         mapQuery: `${place.name} ${formattedAddress}`,
         inventory: defaultAgriInventory.slice(0, 7 + (index % 5)),
