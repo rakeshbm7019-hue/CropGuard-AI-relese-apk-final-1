@@ -1,7 +1,6 @@
 import React from "react";
 import fullLogo from "../assets/images/cropguard_creative_fullfit_logo_1789282729066.jpg";
 import { motion } from "motion/react";
-import { AdBanner } from "./AdBanner";
 import {
   ArrowRight,
   CheckCircle2,
@@ -237,8 +236,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onOpenAd
           })}
         </div>
       </section>
-
-      <AdBanner slotId="landing-mid-bottom" />
 
       {/* 3. FINAL CALL TO ACTION BANNER */}
       <section className="max-w-4xl mx-auto text-center py-6 sm:py-10 space-y-6">

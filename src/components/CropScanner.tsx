@@ -42,7 +42,7 @@ import {
   QrCode,
 } from "lucide-react";
 import { DiseaseAnalysisResult, Language, UserProfile } from "../types";
-import { showRewardedAd } from "../lib/admob";
+import { showRewardedAd, prepareRewardedAdSilent } from "../lib/admob";
 import { UI_TRANSLATIONS } from "../data/translations";
 import { OFFLINE_DISEASE_HANDBOOK } from "../data/offlineDiseaseHandbook";
 import { getTailoredShopsForLocation } from "../data/fertilizerShops";
@@ -104,12 +104,41 @@ export const CropScanner: React.FC<CropScannerProps> = ({
   const cameraFallbackInputRef = useRef<HTMLInputElement>(null);
 
   const [isPremiumUnlocked, setIsPremiumUnlocked] = useState(false);
+  const [isRewardedLoading, setIsRewardedLoading] = useState(false);
+  const [rewardedNotice, setRewardedNotice] = useState<string | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
 
-  const handleUnlockPremium = () => {
-    showRewardedAd(() => {
-      setIsPremiumUnlocked(true);
-    });
+  const handleUnlockPremium = async () => {
+    if (isRewardedLoading || isPremiumUnlocked) return;
+    setIsRewardedLoading(true);
+    setRewardedNotice(null);
+
+    let handledNotice = false;
+    const result = await showRewardedAd(
+      () => {
+        setIsPremiumUnlocked(true);
+        setRewardedNotice(null);
+      },
+      {
+        onDismissedWithoutReward: () => {
+          handledNotice = true;
+          setRewardedNotice("Please watch the full video ad to unlock commercial brand details.");
+        },
+        onFailedToLoad: (errMsg) => {
+          handledNotice = true;
+          setRewardedNotice(`Video ad unavailable right now (${errMsg}). You can try again shortly.`);
+        },
+        onFailedToShow: (errMsg) => {
+          handledNotice = true;
+          setRewardedNotice(`Could not open video ad (${errMsg}). Please try again.`);
+        },
+      }
+    );
+
+    setIsRewardedLoading(false);
+    if (!result.rewarded && result.error && !handledNotice) {
+      setRewardedNotice(result.error);
+    }
   };
 
   // Helper to pick matching offline handbook item without defaulting to Ginger
@@ -164,6 +193,13 @@ export const CropScanner: React.FC<CropScannerProps> = ({
       })
       .catch(() => {});
   }, []);
+
+  // Preload voluntary rewarded ad silently when a non-healthy valid diagnosis is shown
+  useEffect(() => {
+    if (analysisResult && analysisResult.isValidCrop !== false && !analysisResult.isHealthy && !isPremiumUnlocked) {
+      prepareRewardedAdSilent().catch(() => {});
+    }
+  }, [analysisResult, isPremiumUnlocked]);
 
   // Load SpeechSynthesis Voices
   useEffect(() => {
@@ -278,6 +314,8 @@ export const CropScanner: React.FC<CropScannerProps> = ({
         setImagePreview(dataUrl);
         setAnalysisResult(null);
         setDisplayResult(null);
+        setIsPremiumUnlocked(false);
+        setRewardedNotice(null);
         setErrorText("");
         stopCamera();
       }
@@ -293,6 +331,8 @@ export const CropScanner: React.FC<CropScannerProps> = ({
       setImagePreview(base64);
       setAnalysisResult(null);
       setDisplayResult(null);
+      setIsPremiumUnlocked(false);
+      setRewardedNotice(null);
       setErrorText("");
     };
     reader.readAsDataURL(file);
@@ -1482,11 +1522,21 @@ export const CropScanner: React.FC<CropScannerProps> = ({
                       <div className="flex flex-col sm:flex-row gap-3">
                         <button
                           onClick={handleUnlockPremium}
-                          className="flex-1 py-3 px-6 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-3 shadow-lg shadow-amber-200/50 dark:shadow-none transition-all active:scale-95 cursor-pointer group"
+                          disabled={isRewardedLoading}
+                          className="flex-1 py-3 px-6 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-70 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-3 shadow-lg shadow-amber-200/50 dark:shadow-none transition-all active:scale-95 cursor-pointer group"
                         >
-                          <Radio className="w-5 h-5 animate-pulse" />
-                          <span>WATCH AD TO UNLOCK</span>
-                          <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                          {isRewardedLoading ? (
+                            <>
+                              <RefreshCw className="w-5 h-5 animate-spin" />
+                              <span>LOADING VIDEO AD...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Radio className="w-5 h-5 animate-pulse" />
+                              <span>WATCH AD TO UNLOCK</span>
+                              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                            </>
+                          )}
                         </button>
 
                         <button
@@ -1498,6 +1548,12 @@ export const CropScanner: React.FC<CropScannerProps> = ({
                           <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                         </button>
                       </div>
+
+                      {rewardedNotice && (
+                        <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 bg-amber-100/70 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800/60 px-3 py-2 rounded-xl">
+                          {rewardedNotice}
+                        </p>
+                      )}
                       
                       <p className="text-[10px] text-stone-400 dark:text-zinc-500 text-center sm:text-left italic">
                         * Rewards are unlocked instantly after watching a short video advertisement.

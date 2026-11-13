@@ -4,11 +4,14 @@ import App from './App.tsx';
 import './index.css';
 import { initializeAdMob, showAppOpenAd } from './lib/admob.ts';
 
-// Initialize AdMob when the app starts
-initializeAdMob().then(() => {
-  // Show App Open Ad on startup if on mobile
-  showAppOpenAd();
-});
+// Initialize AdMob once on app startup
+initializeAdMob()
+  .then((ok) => {
+    if (ok) {
+      showAppOpenAd().catch(() => {});
+    }
+  })
+  .catch(() => {});
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -11,23 +11,32 @@ class MainActivity : BridgeActivity() {
 
     companion object {
         private const val TAG = "CropGuardAdMob"
+        @Volatile
+        private var isMobileAdsInitialized = false
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Initialize Google Mobile Ads (AdMob) with detailed error & status logging
-        try {
-            Log.d(TAG, "Initializing Google Mobile Ads SDK (App ID: ca-app-pub-6652067022010690~4420290370)...")
-            MobileAds.initialize(this) { initializationStatus: InitializationStatus ->
-                val statusMap: Map<String, AdapterStatus> = initializationStatus.adapterStatusMap
-                for ((adapterClass, status) in statusMap) {
-                    Log.d(TAG, "AdMob Adapter: $adapterClass | State: ${status.initializationState} | Description: ${status.description} | Latency: ${status.latency}")
+        // Initialize Google Mobile Ads (AdMob) once with detailed adapter status & error logging
+        if (!isMobileAdsInitialized) {
+            isMobileAdsInitialized = true
+            try {
+                Log.d(TAG, "Initializing Google Mobile Ads SDK (App ID: ca-app-pub-6652067022010690~4420290370)...")
+                MobileAds.initialize(this) { initializationStatus: InitializationStatus ->
+                    val statusMap: Map<String, AdapterStatus> = initializationStatus.adapterStatusMap
+                    for ((adapterClass, status) in statusMap) {
+                        Log.d(
+                            TAG,
+                            "AdMob Adapter: $adapterClass | State: ${status.initializationState} | Description: ${status.description} | Latency: ${status.latency}ms"
+                        )
+                    }
+                    Log.d(TAG, "Google Mobile Ads SDK initialization completed.")
                 }
-                Log.d(TAG, "Google Mobile Ads SDK initialization completed successfully.")
+            } catch (e: Exception) {
+                isMobileAdsInitialized = false
+                Log.e(TAG, "CRITICAL: Google Mobile Ads SDK initialization threw exception: ${e.message}", e)
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "CRITICAL: Google Mobile Ads SDK initialization threw exception: ${e.message}", e)
         }
 
         // Initialize Firebase Cloud Messaging Channels & Token

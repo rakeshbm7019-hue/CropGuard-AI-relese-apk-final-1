@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { AdBanner } from "./AdBanner";
 import {
   Bot,
   Send,
@@ -867,8 +866,6 @@ export const KisanAIAssistant: React.FC<KisanAIAssistantProps> = ({ language, us
             </div>
           );
         })}
-
-        <AdBanner slotId="chat-inline" className="max-w-xl mx-auto" />
 
         {isLoading && (
           <div className="flex items-center gap-2 text-xs text-emerald-700 dark:text-emerald-400 p-2.5 bg-stone-50 dark:bg-zinc-800/80 rounded-xl border border-stone-200 dark:border-zinc-700 w-fit">

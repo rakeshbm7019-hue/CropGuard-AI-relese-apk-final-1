@@ -174,10 +174,12 @@ export default function App() {
       });
     }
 
-    // Show interstitial ad after scan is completed with reasonable frequency limits
-    showInterstitialAfterScan().catch((err) => {
-      console.warn("AdMob interstitial notice:", err);
-    });
+    // Show interstitial ad shortly after diagnosis renders, respecting frequency limits
+    setTimeout(() => {
+      showInterstitialAfterScan().catch((err) => {
+        console.warn("AdMob interstitial notice:", err);
+      });
+    }, 800);
   };
 
   const handleClearHistory = () => {
@@ -270,28 +272,22 @@ export default function App() {
         ) : (
           <>
             {currentTab === "scan" && (
-              <>
-                <CropScanner
-                  language={language}
-                  isOnline={isOnline}
-                  onSaveScan={handleSaveScan}
-                  onNavigateToShops={() => setCurrentTab("shops")}
-                  scanHistory={currentUserScans}
-                  user={user}
-                />
-                <AdBanner slotId="scanner-bottom" />
-              </>
+              <CropScanner
+                language={language}
+                isOnline={isOnline}
+                onSaveScan={handleSaveScan}
+                onNavigateToShops={() => setCurrentTab("shops")}
+                scanHistory={currentUserScans}
+                user={user}
+              />
             )}
 
             {currentTab === "outbreaks" && (
-              <>
-                <CommunityOutbreakRadar
-                  language={language}
-                  user={user}
-                  onNavigateToScan={() => setCurrentTab("scan")}
-                />
-                <AdBanner slotId="radar-bottom" />
-              </>
+              <CommunityOutbreakRadar
+                language={language}
+                user={user}
+                onNavigateToScan={() => setCurrentTab("scan")}
+              />
             )}
 
             {currentTab === "dosage" && (
@@ -304,19 +300,9 @@ export default function App() {
 
             {currentTab === "weather" && <WeatherWidget language={language} />}
 
-            {currentTab === "mandi" && (
-              <>
-                <MandiPrices language={language} />
-                <AdBanner slotId="mandi-bottom" />
-              </>
-            )}
+            {currentTab === "mandi" && <MandiPrices language={language} />}
 
-            {currentTab === "schemes" && (
-              <>
-                <GovtSchemes language={language} />
-                <AdBanner slotId="schemes-bottom" />
-              </>
-            )}
+            {currentTab === "schemes" && <GovtSchemes language={language} />}
 
             {currentTab === "shops" && <FertilizerShopFinder language={language} user={user} />}
 
@@ -352,9 +338,19 @@ export default function App() {
           />
         )}
 
-        {/* Global Dashboard Bottom AdMob Banner */}
+        {/* Single Global Bottom AdMob Banner (hidden on Admin & Auth Gate) */}
         <div className="pt-4 pb-2">
-          <AdBanner slotId="dashboard-bottom-persistent" />
+          <AdBanner
+            slotId="dashboard-bottom-persistent"
+            visible={
+              currentTab !== "admin" &&
+              (showLanding ||
+                Boolean(user?.isLoggedIn) ||
+                (typeof window !== "undefined" &&
+                  (new URLSearchParams(window.location.search).get("preview") === "true" ||
+                    new URLSearchParams(window.location.search).get("demo") === "true")))
+            }
+          />
         </div>
       </main>
 
