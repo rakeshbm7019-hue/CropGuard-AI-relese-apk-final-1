@@ -47,9 +47,12 @@ class MainActivity : BridgeActivity() {
             Log.w(TAG, "FCM init notice: ${e.message}")
         }
 
-        // Request Native Location & Notification Permissions on Startup
+        // Request Native Camera, Location & Notification Permissions on Startup
         val permissionsToRequest = mutableListOf<String>()
 
+        if (checkSelfPermission(android.Manifest.permission.CAMERA) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            permissionsToRequest.add(android.Manifest.permission.CAMERA)
+        }
         if (checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
             permissionsToRequest.add(android.Manifest.permission.ACCESS_FINE_LOCATION)
         }

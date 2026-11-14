@@ -23,6 +23,7 @@ import {
 import { Language, WeatherInfo } from "../types";
 import { UI_TRANSLATIONS } from "../data/translations";
 import { Geolocation } from "@capacitor/geolocation";
+import { apiFetchJson, hasRemoteApiBackend } from "../lib/api";
 
 interface WeatherWidgetProps {
   language: Language;
@@ -51,24 +52,26 @@ export const WeatherWidget: React.FC<WeatherWidgetProps> = ({ language }) => {
         payload.location = currentLocationName;
       }
 
-      try {
-        const response = await fetch("/api/weather", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        const json = await response.json();
-        if (json.success && json.data) {
-          setLoading(false);
-          setWeather(json.data);
-          if (json.data.locationName) {
-            setCurrentLocationName(json.data.locationName);
+      if (hasRemoteApiBackend()) {
+        try {
+          const json = await apiFetchJson("/api/weather", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+            timeoutMs: 8000,
+          });
+          if (json.success && json.data) {
+            setLoading(false);
+            setWeather(json.data);
+            if (json.data.locationName) {
+              setCurrentLocationName(json.data.locationName);
+            }
+            setSelectedForecastIndex(0);
+            return;
           }
-          setSelectedForecastIndex(0);
-          return;
+        } catch (_) {
+          // Fallback directly to client-side Open-Meteo API when running standalone offline or in APK
         }
-      } catch (_) {
-        // Fallback directly to client-side Open-Meteo API when running standalone offline or in APK
       }
 
       // Direct Open-Meteo Client Call for 100% Guaranteed Weather in APK

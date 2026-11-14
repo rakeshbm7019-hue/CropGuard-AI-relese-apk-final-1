@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { apiFetchJson, hasRemoteApiBackend } from "../lib/api";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -109,8 +110,24 @@ export const MandiPrices: React.FC<MandiPricesProps> = ({ language }) => {
     setIsSearchingGoogle(true);
     setSearchSummary(null);
 
+    const applyLocalFilter = () => {
+      const filtered = MOCK_MANDI_PRICES.filter((item) => {
+        const matchC = !effectiveCrop || item.crop.toLowerCase().includes(effectiveCrop.toLowerCase());
+        const matchS = !effectiveState || item.state.toLowerCase().includes(effectiveState.toLowerCase());
+        const matchD = !effectiveDistrict || item.district.toLowerCase().includes(effectiveDistrict.toLowerCase());
+        return matchC && matchS && matchD;
+      });
+      setMandiItems(filtered.length > 0 ? filtered : MOCK_MANDI_PRICES);
+      setIsSearchingGoogle(false);
+    };
+
+    if (!hasRemoteApiBackend()) {
+      applyLocalFilter();
+      return;
+    }
+
     try {
-      const response = await fetch("/api/mandi/search", {
+      const json = await apiFetchJson("/api/mandi/search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -121,7 +138,6 @@ export const MandiPrices: React.FC<MandiPricesProps> = ({ language }) => {
         }),
       });
 
-      const json = await response.json();
       setIsSearchingGoogle(false);
 
       if (json.success && Array.isArray(json.results) && json.results.length > 0) {
@@ -131,16 +147,10 @@ export const MandiPrices: React.FC<MandiPricesProps> = ({ language }) => {
             `Showing APMC rates for ${effectiveCrop || "crops"} in ${effectiveDistrict ? effectiveDistrict + ", " : ""}${effectiveState || "India"}`
         );
       } else {
-        const filtered = MOCK_MANDI_PRICES.filter((item) => {
-          const matchC = !effectiveCrop || item.crop.toLowerCase().includes(effectiveCrop.toLowerCase());
-          const matchS = !effectiveState || item.state.toLowerCase().includes(effectiveState.toLowerCase());
-          const matchD = !effectiveDistrict || item.district.toLowerCase().includes(effectiveDistrict.toLowerCase());
-          return matchC && matchS && matchD;
-        });
-        setMandiItems(filtered.length > 0 ? filtered : MOCK_MANDI_PRICES);
+        applyLocalFilter();
       }
     } catch (err) {
-      setIsSearchingGoogle(false);
+      applyLocalFilter();
     }
   };
 

@@ -43,6 +43,8 @@ import {
 } from "lucide-react";
 import { DiseaseAnalysisResult, Language, UserProfile } from "../types";
 import { showRewardedAd, prepareRewardedAdSilent } from "../lib/admob";
+import { apiFetchJson, hasRemoteApiBackend } from "../lib/api";
+import { analyzeCropImageOnDevice } from "../services/localCropAnalyzer";
 import { UI_TRANSLATIONS } from "../data/translations";
 import { OFFLINE_DISEASE_HANDBOOK } from "../data/offlineDiseaseHandbook";
 import { getTailoredShopsForLocation } from "../data/fertilizerShops";
@@ -177,8 +179,8 @@ export const CropScanner: React.FC<CropScannerProps> = ({
   } | null>(null);
 
   useEffect(() => {
-    fetch("/api/outbreaks?maxDistance=25")
-      .then((r) => r.json())
+    if (!hasRemoteApiBackend()) return;
+    apiFetchJson("/api/outbreaks?maxDistance=25")
       .then((data) => {
         if (data.success && Array.isArray(data.alerts) && data.alerts.length > 0) {
           const closest = data.alerts[0];
@@ -355,47 +357,52 @@ export const CropScanner: React.FC<CropScannerProps> = ({
         });
         setGpsLat(pos.coords.latitude);
         setGpsLng(pos.coords.longitude);
-        const geoRes = await fetch(`/api/reverse-geocode?lat=${pos.coords.latitude}&lng=${pos.coords.longitude}`);
-        const geoData = await geoRes.json();
-        if (geoData?.formattedLocation) {
-          liveLocation = geoData.formattedLocation;
+        if (hasRemoteApiBackend()) {
+          const geoData = await apiFetchJson(
+            `/api/reverse-geocode?lat=${pos.coords.latitude}&lng=${pos.coords.longitude}`,
+            { timeoutMs: 5000 }
+          );
+          if (geoData?.formattedLocation) {
+            liveLocation = geoData.formattedLocation;
+          }
+        } else if (isOnline) {
+          const bdcRes = await fetch(
+            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${pos.coords.latitude}&longitude=${pos.coords.longitude}&localityLanguage=en`
+          );
+          const bdcData = await bdcRes.json();
+          const areaPart = bdcData?.locality || bdcData?.city;
+          const statePart = bdcData?.principalSubdivision;
+          if (areaPart || statePart) {
+            liveLocation = [areaPart, statePart].filter(Boolean).join(", ");
+          }
         }
       }
     } catch (_) {
       // Fallback to user profile location if GPS fails
     }
 
-    if (!isOnline) {
-      // OFFLINE FALLBACK
-      setTimeout(() => {
+    const completeWithOnDeviceScan = async () => {
+      try {
+        const localResult = await analyzeCropImageOnDevice(
+          imagePreview,
+          selectedCrop,
+          language,
+          liveLocation
+        );
         setIsAnalyzing(false);
-        const match = getOfflineHandbookMatch(selectedCrop, imagePreview);
+        setAnalysisResult(localResult);
+        setDisplayResult(localResult);
+        if (localResult.isValidCrop !== false) {
+          onSaveScan(localResult);
+        }
+      } catch (_) {
+        setIsAnalyzing(false);
+        setErrorText("Unable to read the selected image. Please capture or upload a clear crop leaf photo.");
+      }
+    };
 
-        const offlineResult: DiseaseAnalysisResult = {
-          crop: match.crop,
-          diseaseName: match.diseaseName,
-          isHealthy: false,
-          confidence: 88,
-          severity: match.severity,
-          symptoms: match.symptoms.join(". "),
-          organicTreatment: [match.organicCure],
-          chemicalTreatment: [match.chemicalCure],
-          fertilizerAdvice: match.fertilizer,
-          preventiveMeasures: [
-            "Maintain clean drainage channel around field.",
-            "Sterilize farm implements before prunings.",
-            "Destroy and bury severely infected crop residue."
-          ],
-          recommendedProducts: ["Copper Oxychloride 50% WP", "Trichoderma Viride", "NPK 19:19:19"],
-          urgencyNote: "Offline diagnosis generated from cached agricultural disease manual.",
-          scannedAt: new Date().toLocaleTimeString(),
-          imageUrl: imagePreview,
-          location: liveLocation,
-        };
-        setAnalysisResult(offlineResult);
-        setDisplayResult(offlineResult);
-        onSaveScan(offlineResult);
-      }, 1200);
+    if (!isOnline || !hasRemoteApiBackend()) {
+      await completeWithOnDeviceScan();
       return;
     }
 
@@ -404,9 +411,10 @@ export const CropScanner: React.FC<CropScannerProps> = ({
       const mimeMatch = imagePreview.match(/^data:(image\/[a-zA-Z0-9+.-]+);base64,/);
       if (mimeMatch) mime = mimeMatch[1];
 
-      const response = await fetch("/api/analyze-crop", {
+      const json = await apiFetchJson("/api/analyze-crop", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        timeoutMs: 25000,
         body: JSON.stringify({
           imageBase64: imagePreview,
           mimeType: mime,
@@ -419,7 +427,6 @@ export const CropScanner: React.FC<CropScannerProps> = ({
         }),
       });
 
-      const json = await response.json();
       setIsAnalyzing(false);
 
       if (json.success && json.data) {
@@ -512,8 +519,8 @@ export const CropScanner: React.FC<CropScannerProps> = ({
         setDisplayResult(rejectedResult);
       }
     } catch (err: any) {
-      setIsAnalyzing(false);
-      setErrorText("Analysis could not be completed. Please check network connection and ensure you upload a clear crop photo.");
+      console.warn("[CropScanner] Remote API unreachable, falling back to on-device crop analysis:", err?.message || err);
+      await completeWithOnDeviceScan();
     }
   };
 
@@ -546,9 +553,13 @@ export const CropScanner: React.FC<CropScannerProps> = ({
       return;
     }
 
+    if (!hasRemoteApiBackend()) {
+      return;
+    }
+
     setIsTranslating(true);
     try {
-      const res = await fetch("/api/crop/translate", {
+      const json = await apiFetchJson("/api/crop/translate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -556,7 +567,6 @@ export const CropScanner: React.FC<CropScannerProps> = ({
           targetLanguage: langNameMap[targetLang] || "Hindi",
         }),
       });
-      const json = await res.json();
       setIsTranslating(false);
       if (json.success && json.data) {
         setDisplayResult({
@@ -585,14 +595,32 @@ export const CropScanner: React.FC<CropScannerProps> = ({
   // Fetch nearest fertilizer shops whenever analysis completes for valid crops only
   useEffect(() => {
     if (analysisResult && analysisResult.isValidCrop !== false && !analysisResult.crop?.toLowerCase().includes("invalid")) {
-      setLoadingShops(true);
       const productNeeded = analysisResult.recommendedProducts?.[0] || analysisResult.crop;
       const userDistrict = user?.district || "";
       const userState = user?.state || "";
       const userTaluk = user?.taluk || "";
       const userArea = user?.location || "";
 
-      fetch("/api/shops/search", {
+      const applyLocalShops = () => {
+        let shops = getTailoredShopsForLocation(productNeeded, userDistrict, userState, userTaluk);
+        if (gpsLat !== undefined && gpsLng !== undefined) {
+          shops = [...shops].sort((a, b) => {
+            const dA = (a.lat !== undefined && a.lng !== undefined) ? calculateDistance(gpsLat, gpsLng, a.lat, a.lng) : (a.distanceKm || 999);
+            const dB = (b.lat !== undefined && b.lng !== undefined) ? calculateDistance(gpsLat, gpsLng, b.lat, b.lng) : (b.distanceKm || 999);
+            return dA - dB;
+          });
+        }
+        setLoadingShops(false);
+        setNearbyShops(shops.slice(0, 10));
+      };
+
+      if (!hasRemoteApiBackend()) {
+        applyLocalShops();
+        return;
+      }
+
+      setLoadingShops(true);
+      apiFetchJson("/api/shops/search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -608,7 +636,6 @@ export const CropScanner: React.FC<CropScannerProps> = ({
           language: language,
         }),
       })
-        .then((res) => res.json())
         .then((json) => {
           setLoadingShops(false);
           let shops = [];
@@ -617,8 +644,7 @@ export const CropScanner: React.FC<CropScannerProps> = ({
           } else {
             shops = getTailoredShopsForLocation(productNeeded, userDistrict, userState, userTaluk);
           }
-          
-          // Ensure shops are sorted by distance if GPS is available
+
           if (gpsLat !== undefined && gpsLng !== undefined) {
             shops = [...shops].sort((a, b) => {
               const dA = (a.lat !== undefined && a.lng !== undefined) ? calculateDistance(gpsLat, gpsLng, a.lat, a.lng) : (a.distanceKm || 999);
@@ -626,13 +652,11 @@ export const CropScanner: React.FC<CropScannerProps> = ({
               return dA - dB;
             });
           }
-          
+
           setNearbyShops(shops.slice(0, 10));
         })
         .catch(() => {
-          setLoadingShops(false);
-          const shops = getTailoredShopsForLocation(productNeeded, userDistrict, userState, userTaluk);
-          setNearbyShops(shops.slice(0, 10));
+          applyLocalShops();
         });
     } else {
       setNearbyShops([]);
